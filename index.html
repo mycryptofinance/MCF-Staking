@@ -1,1 +1,735 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MCF Ecosystem</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-dark: #020402;
+            --card-bg: #061f14; /* Темно-зеленый фон как на скрине */
+            --primary: #00ff88;
+            --primary-dim: rgba(0, 255, 136, 0.15);
+            --accent-orange: #ff9f43; /* Оранжевый со скрина */
+            --text-main: #f0fdf4;
+            --text-muted: #86efac;
+            --border: rgba(0, 255, 136, 0.3);
+            --neon: 0 0 15px rgba(0, 255, 136, 0.3);
+            --error: #ef4444;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex; flex-direction: column;
+            /* Сетка на фоне */
+            background-image: linear-gradient(rgba(0, 255, 136, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 136, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            overflow-x: hidden;
+        }
+
+        /* --- HEADER --- */
+        header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px 5%; border-bottom: 1px solid var(--border);
+            background: rgba(2, 4, 2, 0.9); backdrop-filter: blur(10px);
+            position: sticky; top: 0; z-index: 100;
+        }
+
+        .brand { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 1.4rem; color: var(--primary); text-shadow: 0 0 10px rgba(0,255,136,0.5); }
+        .logo-icon { width: 35px; height: 35px; background: linear-gradient(135deg, #00ff88, #059669); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #000; box-shadow: var(--neon); }
+        .wallet-info { display: flex; align-items: center; gap: 8px; }
+
+        .network-select {
+            appearance: none; background: rgba(0, 255, 136, 0.05); border: 1px solid var(--primary);
+            color: var(--primary); padding: 8px 12px; border-radius: 8px; font-weight: 700;
+            outline: none; text-align: center; font-size: 0.9rem; cursor: pointer;
+        }
+        .network-select option { background: #000; color: #fff; }
+
+        .btn-connect {
+            background: transparent; color: var(--primary); border: 2px solid var(--primary);
+            padding: 8px 16px; border-radius: 8px; font-weight: 700; cursor: pointer; transition: 0.3s;
+            font-size: 0.9rem; white-space: nowrap;
+        }
+        .btn-connect:hover { background: var(--primary); color: #000; box-shadow: var(--neon); }
+        .btn-connect.connected { border-color: var(--error); color: var(--error); }
+
+        /* --- MAIN LAYOUT --- */
+        main { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 40px; padding: 40px 15px; width: 100%; max-width: 1100px; margin: 0 auto; }
+
+        h2 { color: #fff; margin-bottom: 20px; text-transform: uppercase; font-size: 1.4rem; font-weight: 800; display: flex; align-items: center; gap: 10px; }
+        h2 i { color: var(--primary); }
+
+        .card {
+            background: var(--card-bg); border: 1px solid var(--border);
+            padding: 30px; border-radius: 20px; width: 100%;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative; overflow: hidden;
+        }
+        /* Зеленая полоска сверху как на скрине */
+        .card::before {
+            content: ''; position: absolute; top:0; left:0; width:100%; height:6px;
+            background: linear-gradient(90deg, var(--primary), #004422);
+            box-shadow: 0 0 10px var(--primary);
+        }
+
+        /* --- RESTORED STATS GRID (Visual Fix) --- */
+        .stats-grid { 
+            display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; 
+        }
+        .stat-box { 
+            background: rgba(0,0,0,0.4); border: 1px solid #333; border-radius: 12px; 
+            padding: 15px; text-align: center; display: flex; flex-direction: column; gap: 5px;
+        }
+        .stat-label { font-size: 0.75rem; color: var(--primary); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+        .stat-value { font-size: 1.1rem; color: var(--accent-orange); font-family: monospace; font-weight: bold; text-shadow: 0 0 5px rgba(255, 159, 67, 0.3); }
+
+        /* --- INPUTS --- */
+        .input-group label { display: block; margin-bottom: 8px; color: var(--primary); font-size: 0.85rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; }
+        .input-wrapper { display: flex; align-items: center; background: #020b05; border: 1px solid #333; border-radius: 10px; padding-right: 15px; transition: 0.3s; }
+        .input-wrapper:focus-within { border-color: var(--primary); box-shadow: 0 0 10px rgba(0,255,136,0.1); }
+        input { width: 100%; background: transparent; border: none; padding: 18px; color: #fff; font-size: 1.3rem; font-family: monospace; outline: none; }
+        .currency { font-weight: 900; color: var(--primary); font-size: 1.2rem; }
+
+        .btn-action { 
+            width: 100%; padding: 20px; 
+            background: var(--primary); 
+            border: none; border-radius: 12px; color: #000; 
+            font-weight: 900; font-size: 1.2rem; cursor: pointer; text-transform: uppercase; 
+            transition: 0.3s; margin-top: 25px; box-shadow: 0 5px 15px rgba(0, 255, 136, 0.3); 
+        }
+        .btn-action:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0, 255, 136, 0.5); }
+        .btn-action:active { transform: scale(0.98); }
+        .btn-action:disabled { background: #333; color: #666; cursor: not-allowed; box-shadow: none; transform: none; }
+
+        /* --- STAKING STYLES --- */
+        .staking-plans { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+        .plan-card {
+            background: rgba(0,0,0,0.4); border: 1px solid #333; border-radius: 10px;
+            padding: 15px 5px; text-align: center; cursor: pointer; transition: 0.3s;
+            display: flex; flex-direction: column; gap: 5px; position: relative;
+        }
+        .plan-card:hover { border-color: var(--primary); }
+        .plan-card.selected { border-color: var(--primary); background: var(--primary-dim); box-shadow: inset 0 0 10px rgba(0,255,136,0.1); }
+        .plan-duration { font-size: 0.8rem; color: var(--text-muted); font-weight: 700; }
+        .plan-apy { font-size: 1.2rem; color: #fff; font-weight: 900; }
+        
+        .staking-calculator {
+            background: rgba(0,255,136,0.05); padding: 15px; border-radius: 10px; margin-top: 15px;
+            display: flex; justify-content: space-between; align-items: center; border: 1px dashed var(--border);
+        }
+        .calc-val { font-size: 1.2rem; color: var(--primary); font-weight: bold; font-family: monospace; }
+
+        .user-stakes-container { margin-top: 30px; border-top: 1px solid #333; padding-top: 20px; }
+        .stake-row {
+            background: rgba(0,0,0,0.6); border: 1px solid #333; border-radius: 10px;
+            padding: 15px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 10px;
+        }
+        .stake-header { display: flex; justify-content: space-between; color: #fff; font-weight: bold; }
+        .stake-timer { font-family: monospace; color: var(--primary); }
+        .btn-claim { padding: 10px; width: 100%; background: transparent; border: 1px solid var(--primary); color: var(--primary); border-radius: 6px; font-weight: 700; cursor: pointer; margin-top: 5px; }
+        .btn-claim:hover { background: var(--primary); color: #000; }
+        .btn-claim:disabled { border-color: #444; color: #555; background: transparent; cursor: not-allowed; }
+
+        /* --- NFT GRID --- */
+        .nft-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 25px; width: 100%; perspective: 1000px;
+        }
+        .nft-card {
+            background: rgba(10, 20, 15, 0.9); border: 1px solid var(--border); border-radius: 16px;
+            padding: 15px; display: flex; flex-direction: column; align-items: center;
+            transition: transform 0.4s ease, box-shadow 0.4s ease; transform-style: preserve-3d;
+        }
+        @media (min-width: 769px) {
+            .nft-card:hover { transform: translateY(-10px) rotateX(5deg) rotateY(2deg); box-shadow: 0 20px 40px rgba(0, 255, 136, 0.2); border-color: var(--primary); z-index: 10; }
+        }
+        .nft-image-container { width: 100%; aspect-ratio: 1/1; background: #000; border-radius: 10px; overflow: hidden; margin-bottom: 12px; border: 1px solid #333; }
+        .nft-image { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s; }
+        .nft-card:hover .nft-image { transform: scale(1.1); }
+        .btn-mint-nft { width: 100%; padding: 12px; background: transparent; border: 2px solid var(--primary); color: var(--primary); border-radius: 8px; font-weight: 800; cursor: pointer; transition: 0.3s; text-transform: uppercase; font-size: 0.9rem; }
+        .btn-mint-nft:hover { background: var(--primary); color: #000; box-shadow: var(--neon); }
+        .btn-mint-nft:disabled { border-color: #444; color: #555; background: transparent; box-shadow: none; cursor: not-allowed; }
+        .btn-mint-nft.owned { background: #111; border-color: #333; color: #fff; box-shadow: none; cursor: not-allowed; }
+
+        /* --- MOBILE ADAPT --- */
+        @media (max-width: 768px) {
+            header { flex-wrap: wrap; gap: 15px; padding: 15px; }
+            .wallet-info { width: 100%; justify-content: space-between; }
+            .network-select { flex-grow: 1; margin-right: 10px; }
+            .badge { display: none !important; }
+            main { padding: 20px 10px; gap: 20px; }
+            .staking-plans { grid-template-columns: 1fr 1fr; gap: 8px; }
+            .nft-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .nft-card { padding: 10px; }
+            .btn-mint-nft { padding: 8px; font-size: 0.75rem; }
+            
+            /* Footer mobile */
+            .footer-socials { flex-direction: column; width: 100%; gap: 10px; }
+            .social-btn { width: 100%; justify-content: center; }
+        }
+
+        /* --- MODAL --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); z-index: 2000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
+        .modal-content { background: #0a1f16; border: 1px solid var(--primary); padding: 30px; border-radius: 16px; width: 90%; max-width: 360px; text-align: center; }
+        .spinner { width: 40px; height: 40px; border: 4px solid rgba(0,255,136,0.1); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 15px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .tx-hash-link { display: inline-block; padding: 10px; background: rgba(255,255,255,0.05); border: 1px dashed var(--primary); color: var(--primary); text-decoration: none; border-radius: 6px; font-family: monospace; font-size: 0.8rem; margin-top: 15px; word-break: break-all; }
+        .btn-close { margin-top: 20px; padding: 8px 25px; background: transparent; border: 1px solid #555; color: #aaa; border-radius: 6px; cursor: pointer; }
+        .error-msg { color: var(--error); font-size: 0.85rem; margin-top: 10px; display: none; text-align: center; }
+
+        /* --- STYLIZED FOOTER --- */
+        footer { 
+            border-top: 1px solid #333; 
+            padding: 40px 20px; 
+            background: rgba(2, 4, 2, 0.95);
+            margin-top: auto; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .footer-socials {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .social-btn {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 25px;
+            background: rgba(0, 255, 136, 0.05);
+            border: 1px solid var(--primary);
+            border-radius: 30px; /* Pill shape */
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.9rem;
+            transition: 0.3s;
+            text-transform: uppercase;
+        }
+
+        .social-btn i { font-size: 1.1rem; }
+
+        .social-btn:hover {
+            background: var(--primary);
+            color: #000;
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.6);
+            transform: translateY(-3px);
+        }
+
+        .footer-copy {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand"><div class="logo-icon">⚡</div> MCF DEFI</div>
+        <div class="wallet-info">
+            <select id="networkSelect" class="network-select" onchange="switchNetwork(this.value)">
+                <option value="" disabled selected>Network</option>
+                <option value="1">ETH</option>
+                <option value="11155111">Sepolia</option>
+                <option value="8453">Base</option>
+                <option value="56">BNB</option>
+            </select>
+            <div id="balanceDisplay" class="badge"></div>
+            <button id="connectBtn" class="btn-connect">CONNECT</button>
+        </div>
+    </header>
+
+    <main>
+
+        <section class="card">
+            <h2><i class="fas fa-chart-line"></i> Mint MCF</h2>
+            
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-label">Price per Token</div>
+                    <div class="stat-value" id="priceDisplay">...</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Remaining</div>
+                    <div class="stat-value" id="soldDisplay">...</div>
+                </div>
+            </div>
+            
+            <div style="position:relative; width: 100%; height: 8px; background: #000; border-radius: 4px; overflow: hidden; margin-bottom: 25px; border: 1px solid #333;">
+                <div id="supplyBar" style="height: 100%; width: 0%; background: var(--primary); transition: width 0.5s; box-shadow: 0 0 10px var(--primary);"></div>
+                <div id="progressText" style="position:absolute; width:100%; text-align:center; top:-1px; font-size:0.6rem; color:#fff; font-weight:bold; letter-spacing:1px; line-height:10px;">LOADING...</div>
+            </div>
+
+            <div class="input-group">
+                <label>You Pay (ETH)</label>
+                <div class="input-wrapper">
+                    <input type="number" id="mintAmountEth" placeholder="0.01" step="0.001">
+                    <span class="currency">ETH</span>
+                </div>
+            </div>
+
+            <div style="margin-top: 15px; font-size: 0.9rem; color: var(--primary); font-weight: 700; text-transform: uppercase;">
+                Estimated Tokens to Receive:
+                <div id="calcOutput" style="font-size: 1.4rem; color: var(--primary); margin-top: 5px;">0 MCF</div>
+            </div>
+
+            <button id="mintBtn" class="btn-action" onclick="mintToken()" disabled>Connect Wallet</button>
+            <div id="mintError" class="error-msg"></div>
+        </section>
+
+        <section class="card">
+            <h2><i class="fas fa-lock"></i> Staking MCF</h2>
+            
+            <div class="staking-plans" id="stakingPlans">
+                </div>
+
+            <div class="input-group">
+                <label>Amount MCF to Stake</label>
+                <div class="input-wrapper">
+                    <input type="number" id="stakeAmount" placeholder="1000">
+                    <span class="currency">MCF</span>
+                </div>
+            </div>
+
+            <div class="staking-calculator">
+                <span style="color:var(--text-muted); font-size:0.9rem;">Estimated Reward:</span>
+                <span class="calc-val" id="stakeRewardCalc">0.00 MCF</span>
+            </div>
+
+            <button id="btnStake" class="btn-action" onclick="stakeTokens()">STAKE TOKENS</button>
+
+            <div class="user-stakes-container" id="userStakesList">
+                <p style="text-align:center; color: var(--text-muted); font-size: 0.8rem;">Loading stakes...</p>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2><i class="fas fa-paper-plane"></i> Transfer MCF</h2>
+            <div class="input-group">
+                <label>To Address</label>
+                <div class="input-wrapper"><input type="text" id="recipientAddress" placeholder="0x..."></div>
+            </div>
+            <div class="input-group" style="margin-top:15px;">
+                <label>Amount MCF</label>
+                <div class="input-wrapper"><input type="number" id="sendAmount" placeholder="100"><span class="currency">MCF</span></div>
+            </div>
+            <button class="btn-action" onclick="transferToken()">SEND TOKENS</button>
+        </section>
+
+        <section style="width: 100%;">
+            <h2 style="text-align: center; margin-top: 10px; justify-content: center;"><i class="fas fa-gem"></i> NFT Editions</h2>
+            <div class="nft-grid" id="nftGrid"></div>
+        </section>
+
+    </main>
+
+    <footer>
+        <div class="footer-socials">
+            <a href="#" class="social-btn" target="_blank"><i class="fab fa-twitter"></i> Twitter</a>
+            <a href="#" class="social-btn" target="_blank"><i class="fab fa-telegram-plane"></i> Telegram</a>
+            <a href="#" class="social-btn" target="_blank"><i class="fas fa-search"></i> Etherscan</a>
+        </div>
+        <div class="footer-copy">
+            © 2025 MyCryptoFinance Ecosystem. All rights reserved.
+        </div>
+    </footer>
+
+    <div id="txModal" class="modal-overlay">
+        <div class="modal-content">
+            <div id="modalIcon"></div>
+            <h3 id="modalTitle" style="color:#fff; margin-bottom:10px;">Processing</h3>
+            <p id="modalDesc" style="color:#aaa; font-size:0.9rem; margin-bottom:20px;">Waiting...</p>
+            <div id="modalLinkContainer"></div>
+            <button class="btn-close" onclick="closeModal()">Close</button>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // 1. CONFIGURATION
+        // ============================================
+        
+        const MCF_ADDRESS = "0xb66008C221CE3699c7F50AebB07898695845e95f";
+        const NFT_ADDRESS = "0xda2384357a072818a7c1BC4Bbd79Edf22065c95A";
+        const STAKING_ADDRESS = "0x825FC04C154053d9F1f697cd9522019224343fC9";
+
+        // ABIs
+        const MCF_ABI = [
+            "function mint(uint256 amount) payable",
+            "function transfer(address to, uint amount) returns (bool)",
+            "function approve(address spender, uint256 amount) returns (bool)",
+            "function allowance(address owner, address spender) view returns (uint256)",
+            "function balanceOf(address) view returns (uint)",
+            "function mintPrice() view returns (uint)",
+            "function totalSupply() view returns (uint)",
+            "function MAX_SUPPLY() view returns (uint)"
+        ];
+        const NFT_ABI = [
+            "function mintByMCF(uint256 editionId)",
+            "function hasEditionMinted(address _addr, uint256 editionId) view returns (bool)"
+        ];
+        const STAKING_ABI = [
+            "function stake(uint256 amount, uint8 tier)",
+            "function unstake(uint8 tier)",
+            "function calculateReward(address user, uint8 tier) view returns (uint256)",
+            "function userStakes(address, uint8) view returns (uint256 amount, uint256 startTime, uint256 lockDuration)",
+            "function tierConfigs(uint8) view returns (uint256 lockDuration, uint256 rewardMultiplier)"
+        ];
+
+        // Tiers Mapping: 0=Flex, 1=7d, 2=30d, 3=90d
+        const STAKING_PLANS = [
+            { id: 0, days: 0, apy: 5, label: "FLEXIBLE" },
+            { id: 1, days: 7, apy: 10, label: "7 DAYS" },
+            { id: 2, days: 30, apy: 15, label: "30 DAYS" },
+            { id: 3, days: 90, apy: 25, label: "90 DAYS" }
+        ];
+
+        // Images from Placehold.co (Fast loading)
+        const nftImages = [
+            "https://placehold.co/400x400/061f14/00ff88?text=Edition+1", 
+            "https://placehold.co/400x400/061f14/00ff88?text=Edition+2", 
+            "https://placehold.co/400x400/061f14/00ff88?text=Edition+3", 
+            "https://placehold.co/400x400/061f14/00ff88?text=Edition+4", 
+            "https://placehold.co/400x400/061f14/00ff88?text=Edition+5", 
+            "https://placehold.co/400x400/061f14/00ff88?text=Edition+6", 
+            "https://placehold.co/400x400/061f14/00ff88?text=Edition+7", 
+            "https://placehold.co/400x400/061f14/00ff88?text=Edition+8"  
+        ];
+
+        // State
+        let provider, signer, mcfContract, nftContract, stakingContract;
+        let userAccount = null, isConnected = false;
+        let contractState = { mintPriceWei: ethers.BigNumber.from(0), tokensPerEth: 0 };
+        let selectedPlanId = 1;
+        let loadedStakes = [];
+
+        // ============================================
+        // 2. UI INITIALIZATION
+        // ============================================
+
+        const nftGrid = document.getElementById('nftGrid');
+        const plansContainer = document.getElementById('stakingPlans');
+
+        // Render NFT Grid
+        nftGrid.innerHTML = nftImages.map((img, i) => `
+            <div class="nft-card">
+                <div class="nft-image-container"><img src="${img}" class="nft-image" loading="lazy"></div>
+                <div style="font-size:0.9rem; color:#fff; font-weight:bold;">Edition #${i+1}</div>
+                <div style="font-size:0.8rem; color:var(--primary); margin-bottom:5px;">10,000 MCF</div>
+                <button class="btn-mint-nft" id="btn-nft-${i+1}" onclick="mintNFT(${i+1})" disabled>Connect</button>
+            </div>
+        `).join('');
+
+        // Render Staking Plans
+        function renderPlans() {
+            plansContainer.innerHTML = STAKING_PLANS.map(plan => `
+                <div class="plan-card ${plan.id === selectedPlanId ? 'selected' : ''}" onclick="selectPlan(${plan.id})">
+                    <div class="plan-duration">${plan.label}</div>
+                    <div class="plan-apy">${plan.apy}<span>%</span></div>
+                </div>
+            `).join('');
+            calcStakeReward();
+        }
+        renderPlans();
+
+        function selectPlan(id) { selectedPlanId = id; renderPlans(); }
+        document.getElementById('stakeAmount').addEventListener('input', calcStakeReward);
+        
+        function calcStakeReward() {
+            const amt = parseFloat(document.getElementById('stakeAmount').value) || 0;
+            const plan = STAKING_PLANS.find(p => p.id === selectedPlanId);
+            let reward = 0;
+            if(plan.days === 0) reward = amt * (plan.apy / 100) / 365; // Daily
+            else reward = amt * (plan.apy / 100) * (plan.days / 365);
+            
+            document.getElementById('stakeRewardCalc').innerText = 
+                plan.days === 0 ? `~${reward.toFixed(2)} / DAY` : `+${reward.toFixed(2)} MCF`;
+        }
+
+        // ============================================
+        // 3. CORE LOGIC
+        // ============================================
+
+        async function connect() {
+            if (!window.ethereum) return alert("Install MetaMask");
+            try {
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                await provider.send("eth_requestAccounts", []);
+                signer = provider.getSigner();
+                userAccount = await signer.getAddress();
+                
+                mcfContract = new ethers.Contract(MCF_ADDRESS, MCF_ABI, signer);
+                nftContract = new ethers.Contract(NFT_ADDRESS, NFT_ABI, signer);
+                stakingContract = new ethers.Contract(STAKING_ADDRESS, STAKING_ABI, signer);
+
+                isConnected = true;
+                updateUI();
+                fetchMCFData();
+                checkNFTs();
+                loadRealStakes(); 
+
+                window.ethereum.on('accountsChanged', () => window.location.reload());
+                window.ethereum.on('chainChanged', () => window.location.reload());
+            } catch (e) { console.error(e); alert("Connection Error"); }
+        }
+
+        function updateUI() {
+            document.getElementById('connectBtn').innerText = "DISCONNECT";
+            document.getElementById('connectBtn').classList.add("connected");
+            document.getElementById('mintBtn').innerText = "BUY TOKENS";
+            document.getElementById('mintBtn').disabled = false;
+            document.querySelectorAll('.btn-mint-nft').forEach(b => { b.innerText="MINT"; b.disabled=false; });
+            provider.getNetwork().then(net => document.getElementById('networkSelect').value = net.chainId);
+        }
+        
+        document.getElementById('connectBtn').addEventListener('click', () => { if(!isConnected) connect(); else window.location.reload(); });
+
+        // --- MINT TOKENS ---
+        async function mintToken() {
+            if (!isConnected) return;
+            const val = document.getElementById('mintAmountEth').value;
+            if(!val) return;
+            openModal('loading', "Confirm Transaction...");
+            try {
+                const ethVal = ethers.utils.parseEther(val);
+                const tokens = ethVal.div(contractState.mintPriceWei);
+                const tx = await mcfContract.mint(tokens, { value: ethVal });
+                openModal('loading', "Minting...");
+                await tx.wait();
+                openModal('success', "Success!");
+                fetchMCFData();
+            } catch(e) { openModal('error', e.reason || e.message); }
+        }
+
+        // --- TRANSFER ---
+        async function transferToken() {
+            if (!isConnected) return;
+            const to = document.getElementById('recipientAddress').value;
+            const amt = document.getElementById('sendAmount').value;
+            if(!ethers.utils.isAddress(to) || !amt) return alert("Invalid Input");
+            
+            openModal('loading', "Transferring...");
+            try {
+                const val = ethers.utils.parseEther(amt);
+                const tx = await mcfContract.transfer(to, val);
+                await tx.wait();
+                openModal('success', "Sent!");
+            } catch(e) { openModal('error', e.reason || e.message); }
+        }
+
+        // --- NFT MINT ---
+        async function mintNFT(id) {
+            if (!isConnected) return;
+            openModal('loading', "Checking...");
+            try {
+                const price = ethers.utils.parseEther("10000");
+                const allow = await mcfContract.allowance(userAccount, NFT_ADDRESS);
+                if(allow.lt(price)) {
+                    openModal('loading', "Approve MCF...");
+                    const txApp = await mcfContract.approve(NFT_ADDRESS, price);
+                    await txApp.wait();
+                }
+                openModal('loading', "Minting NFT...");
+                const tx = await nftContract.mintByMCF(id);
+                await tx.wait();
+                openModal('success', "NFT Minted!");
+                checkNFTs();
+            } catch(e) { openModal('error', e.reason || e.message); }
+        }
+
+        // ============================================
+        // 4. REAL STAKING LOGIC
+        // ============================================
+
+        async function stakeTokens() {
+            if (!isConnected) return alert("Connect Wallet!");
+            const amt = document.getElementById('stakeAmount').value;
+            if(!amt || amt <= 0) return alert("Enter Amount");
+            
+            const planId = selectedPlanId; 
+
+            openModal('loading', "Checking Allowance...");
+            try {
+                const weiAmt = ethers.utils.parseEther(amt);
+                
+                const allowance = await mcfContract.allowance(userAccount, STAKING_ADDRESS);
+                if(allowance.lt(weiAmt)) {
+                    openModal('loading', "Approve Staking...");
+                    const txApp = await mcfContract.approve(STAKING_ADDRESS, weiAmt);
+                    await txApp.wait();
+                }
+
+                openModal('loading', "Staking...");
+                const txStake = await stakingContract.stake(weiAmt, planId);
+                await txStake.wait();
+
+                openModal('success', "Staked Successfully!");
+                loadRealStakes(); 
+
+            } catch (e) { console.error(e); openModal('error', e.reason || e.message); }
+        }
+
+        async function loadRealStakes() {
+            const container = document.getElementById('userStakesList');
+            container.innerHTML = '<p style="text-align:center; color: #888;">Fetching blockchain data...</p>';
+            loadedStakes = [];
+
+            try {
+                for (let i = 0; i < 4; i++) {
+                    const stakeData = await stakingContract.userStakes(userAccount, i);
+                    if (stakeData.amount.gt(0)) {
+                        const reward = await stakingContract.calculateReward(userAccount, i);
+                        loadedStakes.push({
+                            tierId: i,
+                            amount: ethers.utils.formatEther(stakeData.amount),
+                            startTime: stakeData.startTime.toNumber(),
+                            lockDuration: stakeData.lockDuration.toNumber(),
+                            reward: ethers.utils.formatEther(reward),
+                            label: STAKING_PLANS[i].label,
+                            isFlexible: i === 0
+                        });
+                    }
+                }
+                renderStakesUI();
+            } catch (e) {
+                console.error(e);
+                container.innerHTML = '<p style="text-align:center; color: var(--error);">Error loading stakes (Check console)</p>';
+            }
+        }
+
+        function renderStakesUI() {
+            const container = document.getElementById('userStakesList');
+            if (loadedStakes.length === 0) {
+                container.innerHTML = '<p style="text-align:center; color: #666; font-size: 0.8rem;">No active stakes found.</p>';
+                return;
+            }
+
+            container.innerHTML = loadedStakes.map((stake) => `
+                <div class="stake-row">
+                    <div class="stake-header">
+                        <span>${stake.label}</span>
+                        <span>${parseFloat(stake.amount).toFixed(0)} MCF</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; color:#aaa; font-size:0.8rem;">
+                        <span>Reward: <b style="color:#fff;">+${parseFloat(stake.reward).toFixed(2)}</b></span>
+                        <span class="stake-timer" id="timer-tier-${stake.tierId}">Loading...</span>
+                    </div>
+                    <button class="btn-claim" id="btn-claim-${stake.tierId}" onclick="claimStake(${stake.tierId})" disabled>LOCKED</button>
+                </div>
+            `).join('');
+        }
+
+        setInterval(() => {
+            if(!loadedStakes.length) return;
+            const now = Math.floor(Date.now() / 1000);
+
+            loadedStakes.forEach(stake => {
+                const el = document.getElementById(`timer-tier-${stake.tierId}`);
+                const btn = document.getElementById(`btn-claim-${stake.tierId}`);
+                if(!el) return;
+
+                if(stake.isFlexible) {
+                    el.innerText = "Accruing...";
+                    btn.disabled = false;
+                    btn.innerText = "UNSTAKE & CLAIM";
+                } else {
+                    const endTime = stake.startTime + stake.lockDuration;
+                    const left = endTime - now;
+
+                    if(left <= 0) {
+                        el.innerText = "Unlocked"; el.style.color = "#00ff88";
+                        btn.disabled = false;
+                        btn.innerText = "CLAIM & UNSTAKE";
+                    } else {
+                        const d = Math.floor(left / 86400);
+                        const h = Math.floor((left % 86400) / 3600);
+                        const m = Math.floor((left % 3600) / 60);
+                        const s = left % 60;
+                        el.innerText = `${d}d ${h}h ${m}m ${s}s`;
+                    }
+                }
+            });
+        }, 1000);
+
+        async function claimStake(tierId) {
+            openModal('loading', "Unstaking...");
+            try {
+                const tx = await stakingContract.unstake(tierId);
+                await tx.wait();
+                openModal('success', "Unstaked & Claimed!");
+                loadRealStakes();
+            } catch (e) { openModal('error', e.reason || e.message); }
+        }
+
+        // ============================================
+        // 5. UTILS
+        // ============================================
+
+        async function fetchMCFData() {
+            if(!mcfContract) return;
+            try {
+                const price = await mcfContract.mintPrice();
+                contractState.mintPriceWei = price;
+                const total = await mcfContract.totalSupply();
+                const max = await mcfContract.MAX_SUPPLY();
+                
+                document.getElementById('priceDisplay').innerText = ethers.utils.formatEther(price) + " ETH";
+                document.getElementById('soldDisplay').innerText = parseFloat(ethers.utils.formatEther(total)).toFixed(0);
+                
+                // Progress Bar & Text
+                const pct = total.mul(100).div(max).toNumber();
+                document.getElementById('supplyBar').style.width = pct + "%";
+                document.getElementById('progressText').innerText = `${parseFloat(ethers.utils.formatEther(total)).toLocaleString()} / ${parseFloat(ethers.utils.formatEther(max)).toLocaleString()} SOLD`;
+            } catch(e){}
+        }
+
+        async function checkNFTs() {
+            if(!nftContract) return;
+            for(let i=1; i<=8; i++) {
+                try {
+                    const done = await nftContract.hasEditionMinted(userAccount, i);
+                    const btn = document.getElementById(`btn-nft-${i}`);
+                    if(done) { btn.innerText="ALREADY MINTED"; btn.disabled=true; btn.classList.add('owned'); }
+                } catch(e){}
+            }
+        }
+
+        async function switchNetwork(id) {
+            try { await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: ethers.utils.hexValue(parseInt(id)) }] }); }
+            catch(e) { alert("Switch failed"); }
+        }
+
+        const mintEthInput = document.getElementById('mintAmountEth');
+        mintEthInput.addEventListener('input', (e) => {
+            if(contractState.mintPriceWei.gt(0)) {
+                const ethVal = ethers.utils.parseEther(e.target.value || "0");
+                const tokens = ethVal.div(contractState.mintPriceWei);
+                document.getElementById('calcOutput').innerText = tokens.toString() + " MCF";
+            }
+        });
+
+        function openModal(type, txt) {
+            const m = document.getElementById('txModal'); m.style.display='flex';
+            document.getElementById('modalDesc').innerText = txt;
+            document.getElementById('modalIcon').innerHTML = type==='loading' ? '<div class="spinner"></div>' : (type==='success'?'✅':'❌');
+        }
+        function closeModal() { document.getElementById('txModal').style.display='none'; }
+
+    </script>
+</body>
+</html>
 
