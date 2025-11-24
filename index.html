@@ -699,23 +699,26 @@
         // 5. UTILS
         // ============================================
 
-        async function fetchMCFData() {
-            if(!mcfContract) return;
-            try {
-                const price = await mcfContract.mintPrice();
-                contractState.mintPriceWei = price;
-                const total = await mcfContract.totalSupply();
-                const max = await mcfContract.MAX_SUPPLY();
-                
-                document.getElementById('priceDisplay').innerText = ethers.utils.formatEther(price) + " ETH";
-                document.getElementById('soldDisplay').innerText = parseFloat(ethers.utils.formatEther(total)).toFixed(0);
-                
-                // Progress Bar & Text
-                const pct = total.mul(100).div(max).toNumber();
-                document.getElementById('supplyBar').style.width = pct + "%";
-                document.getElementById('progressText').innerText = `${parseFloat(ethers.utils.formatEther(total)).toLocaleString()} / ${parseFloat(ethers.utils.formatEther(max)).toLocaleString()} SOLD`;
-            } catch(e){}
-        }
+    async function fetchMCFData() {
+    if(!mcfContract) return;
+    try {
+        const price = await mcfContract.mintPrice();
+        contractState.mintPriceWei = price;
+        const total = await mcfContract.totalSupply();
+        const max = await mcfContract.MAX_SUPPLY();
+        
+        const remaining = max.sub(total);
+        
+        document.getElementById('soldDisplay').innerText = parseFloat(ethers.utils.formatEther(remaining)).toLocaleString('ru-RU', { maximumFractionDigits: 0 });
+        document.getElementById('priceDisplay').innerText = ethers.utils.formatEther(price) + " ETH";
+        
+        const pct = total.mul(100).div(max).toNumber();
+        document.getElementById('supplyBar').style.width = pct + "%";
+        
+        document.getElementById('progressText').innerText = `${parseFloat(ethers.utils.formatEther(total)).toLocaleString('ru-RU')} / ${parseFloat(ethers.utils.formatEther(max)).toLocaleString('ru-RU')} SOLD`;
+        
+    } catch(e){}
+}
 
         async function checkNFTs() {
             if(!nftContract) return;
