@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>MCF Ecosystem</title>
+    <link type="image/x-icon" href="https://i.ibb.co/m58shBg0/image-1.png" rel="shortcut icon">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -466,25 +467,25 @@
 
         // Images from Placehold.co (Fast loading)
         const nftImages = [
-            "https://olive-random-anteater-963.mypinata.cloud/ipfs/bafkreicwkh3wdpe4bec5aimnjirtp73sjfadkuwe3sikyatatguxbvfbp4", // 1
-            "https://olive-random-anteater-963.mypinata.cloud/ipfs/bafkreiacnj5vbnw32n2legauzdmlrn5377ifl5ozixp2em6uka5syfa5qe", // 2
-            "https://olive-random-anteater-963.mypinata.cloud/ipfs/bafkreiepkz7zfeyrb6u4u7pg7obechyrqei7l6iy7wc2fdfjm3ims6l2se", // 3
-            "https://olive-random-anteater-963.mypinata.cloud/ipfs/bafkreifnzbz6pr7wy7klmb5tknqi6mnfuh2bxdiy73t2llowdykdxu3boa", // 4
-            "https://olive-random-anteater-963.mypinata.cloud/ipfs/bafkreiaz2w5z7cjbz2ggcgfwovdhpimbipuueffemkw73wq3i7lk5uzifm", // 5
-            "https://olive-random-anteater-963.mypinata.cloud/ipfs/bafkreigkk4y57l7s4fsts5wsjjaqtoi362nmwqhassptuu4k46o3rpdvum", // 6
-            "https://olive-random-anteater-963.mypinata.cloud/ipfs/bafkreigdctqvwaosav37brqwxnglfrnie7puthgfsvvxmroybnqov4aayu", // 7
-            "https://olive-random-anteater-963.mypinata.cloud/ipfs/bafkreiaxboy632fm55nwaeg322d2qsdadzcg6gzhfcntktpdpab6nbmzdi"  // 8
+            "https://olive-random-anteater-963.mypinata.cloud/ipfs/bafkreicwkh3wdpe4bec5aimnjirtp73sjfadkuwe3sikyatatguxbvfbp4",
+            "https://olive-random-anteater-963.mypinata.cloud/ipfs/bafkreiacnj5vbnw32n2legauzdmlrn5377ifl5ozixp2em6uka5syfa5qe",
+            "https://olive-random-anteater-963.mypinata.cloud/ipfs/bafkreiepkz7zfeyrb6u4u7pg7obechyrqei7l6iy7wc2fdfjm3ims6l2se",
+            "https://olive-random-anteater-963.mypinata.cloud/ipfs/bafkreifnzbz6pr7wy7klmb5tknqi6mnfuh2bxdiy73t2llowdykdxu3boa",
+            "https://olive-random-anteater-963.mypinata.cloud/ipfs/bafkreiaz2w5z7cjbz2ggcgfwovdhpimbipuueffemkw73wq3i7lk5uzifm",
+            "https://olive-random-anteater-963.mypinata.cloud/ipfs/bafkreigkk4y57l7s4fsts5wsjjaqtoi362nmwqhassptuu4k46o3rpdvum",
+            "https://olive-random-anteater-963.mypinata.cloud/ipfs/bafkreigdctqvwaosav37brqwxnglfrnie7puthgfsvvxmroybnqov4aayu",
+            "https://olive-random-anteater-963.mypinata.cloud/ipfs/bafkreiaxboy632fm55nwaeg322d2qsdadzcg6gzhfcntktpdpab6nbmzdi"
         ];
 
         const nftNames = [
-            "EAGLE",    // Имя для 1-й картинки
-            "WOLF",     // Имя для 2-й картинки
-            "FOX",     // Имя для 3-й картинки
-            "BEAR",      // Имя для 4-й картинки
-            "HORSE",     // 5
-            "BULL",     // 6
-            "LION",     // 7
-            "OWL"       // 8
+            "EAGLE", 
+            "WOLF", 
+            "FOX", 
+            "BEAR", 
+            "HORSE", 
+            "BULL", 
+            "LION", 
+            "OWL" 
         ];
         // State
         let provider, signer, mcfContract, nftContract, stakingContract;
@@ -566,7 +567,7 @@
 
                 window.ethereum.on('accountsChanged', () => window.location.reload());
                 window.ethereum.on('chainChanged', () => window.location.reload());
-            } catch (e) { console.error(e); alert("Connection Error"); }
+            } catch (e) { console.error(e); openModal('error', "Connection Error"); }
         }
 
         function updateUI() {
@@ -575,7 +576,12 @@
             document.getElementById('mintBtn').innerText = "BUY TOKENS";
             document.getElementById('mintBtn').disabled = false;
             document.querySelectorAll('.btn-mint-nft').forEach(b => { b.innerText="MINT"; b.disabled=false; });
-            provider.getNetwork().then(net => document.getElementById('networkSelect').value = net.chainId);
+            provider.getNetwork().then(net => {
+    const selector = document.getElementById('networkSelect');
+    if (selector) { // Проверяем, существует ли элемент перед установкой значения
+        selector.value = net.chainId;
+    }
+});
         }
         
         document.getElementById('connectBtn').addEventListener('click', () => { if(!isConnected) connect(); else window.location.reload(); });
@@ -591,8 +597,14 @@
                 const tokens = ethVal.div(contractState.mintPriceWei);
                 const tx = await mcfContract.mint(tokens, { value: ethVal });
                 openModal('loading', "Minting...");
-                await tx.wait();
-                openModal('success', "Success!");
+                const receipt = await tx.wait();
+                
+                const tokensToMintInUnits = ethVal.div(contractState.mintPriceWei);
+                const tokensToMint = tokensToMintInUnits.mul(ethers.BigNumber.from(10).pow(18));
+                const tokenAmount = tokensToMintInUnits.toLocaleString('en-US');
+            
+                openModal('success', `Successful Mint!`, receipt.transactionHash, `Received ${tokenAmount} MCF`);
+
                 fetchMCFData();
             } catch(e) { openModal('error', e.reason || e.message); }
         }
@@ -608,8 +620,10 @@
             try {
                 const val = ethers.utils.parseEther(amt);
                 const tx = await mcfContract.transfer(to, val);
-                await tx.wait();
-                openModal('success', "Sent!");
+                const receipt = await tx.wait();
+
+                openModal('success', `Successful Sending!`, receipt.transactionHash, `Sent ${amt} MCF`);
+
             } catch(e) { openModal('error', e.reason || e.message); }
         }
 
@@ -627,8 +641,12 @@
                 }
                 openModal('loading', "Minting NFT...");
                 const tx = await nftContract.mintByMCF(id);
-                await tx.wait();
-                openModal('success', "NFT Minted!");
+                const receipt = await tx.wait();
+
+                
+                const nftName = nftNames[id - 1] || `Edition #${id}`;
+                openModal('success', `NFT successfully mined`, receipt.transactionHash, `NFT received: ${nftName}`);
+
                 checkNFTs();
             } catch(e) { openModal('error', e.reason || e.message); }
         }
@@ -643,6 +661,7 @@
             if(!amt || amt <= 0) return alert("Enter Amount");
             
             const planId = selectedPlanId; 
+            const plan = STAKING_PLANS.find(p => p.id === planId);
 
             openModal('loading', "Checking Allowance...");
             try {
@@ -657,9 +676,11 @@
 
                 openModal('loading', "Staking...");
                 const txStake = await stakingContract.stake(weiAmt, planId);
-                await txStake.wait();
+                const receipt = await txStake.wait();
 
-                openModal('success', "Staked Successfully!");
+                // 🟢 ИЗМЕНЕНИЕ: Детальный вызов openModal
+                openModal('success', `Successful Staking!`, receipt.transactionHash, `Staked${amt} MCF on ${plan.label}`);
+
                 loadRealStakes(); 
 
             } catch (e) { console.error(e); openModal('error', e.reason || e.message); }
@@ -751,8 +772,10 @@
             openModal('loading', "Unstaking...");
             try {
                 const tx = await stakingContract.unstake(tierId);
-                await tx.wait();
-                openModal('success', "Unstaked & Claimed!");
+                const receipt = await tx.wait();
+
+                openModal('success', `Successful Steak Removal!`, receipt.transactionHash, `Your tokens and rewards have been returned.`);
+                
                 loadRealStakes();
             } catch (e) { openModal('error', e.reason || e.message); }
         }
@@ -761,26 +784,44 @@
         // 5. UTILS
         // ============================================
 
-    async function fetchMCFData() {
-    if(!mcfContract) return;
-    try {
-        const price = await mcfContract.mintPrice();
-        contractState.mintPriceWei = price;
-        const total = await mcfContract.totalSupply();
-        const max = await mcfContract.MAX_SUPPLY();
-        
-        const remaining = max.sub(total);
-        
-        document.getElementById('soldDisplay').innerText = parseFloat(ethers.utils.formatEther(remaining)).toLocaleString('ru-RU', { maximumFractionDigits: 0 });
-        document.getElementById('priceDisplay').innerText = ethers.utils.formatEther(price) + " ETH";
-        
-        const pct = total.mul(100).div(max).toNumber();
-        document.getElementById('supplyBar').style.width = pct + "%";
-        
-        document.getElementById('progressText').innerText = `${parseFloat(ethers.utils.formatEther(total)).toLocaleString('ru-RU')} / ${parseFloat(ethers.utils.formatEther(max)).toLocaleString('ru-RU')} SOLD`;
-        
-     } catch(e){}
-    }
+        // 🟢 НОВАЯ ФУНКЦИЯ: Определяет URL скана для данного Chain ID
+        function getExplorerUrl(chainId, txHash) {
+            let baseUrl = "https://etherscan.io"; // Default to Ethereum Mainnet
+            switch(chainId) {
+                case 11155111: // Sepolia
+                    baseUrl = "https://sepolia.etherscan.io";
+                    break;
+                case 8453: // Base
+                    baseUrl = "https://basescan.org";
+                    break;
+                case 56: // BNB Smart Chain
+                    baseUrl = "https://bscscan.com";
+                    break;
+                // Добавьте другие сети по необходимости
+            }
+            return `${baseUrl}/tx/${txHash}`;
+        }
+
+        async function fetchMCFData() {
+        if(!mcfContract) return;
+        try {
+            const price = await mcfContract.mintPrice();
+            contractState.mintPriceWei = price;
+            const total = await mcfContract.totalSupply();
+            const max = await mcfContract.MAX_SUPPLY();
+            
+            const remaining = max.sub(total);
+            
+            document.getElementById('soldDisplay').innerText = parseFloat(ethers.utils.formatEther(remaining)).toLocaleString('ru-RU', { maximumFractionDigits: 0 });
+            document.getElementById('priceDisplay').innerText = ethers.utils.formatEther(price) + " ETH";
+            
+            const pct = total.mul(100).div(max).toNumber();
+            document.getElementById('supplyBar').style.width = pct + "%";
+            
+            document.getElementById('progressText').innerText = `${parseFloat(ethers.utils.formatEther(total)).toLocaleString('ru-RU')} / ${parseFloat(ethers.utils.formatEther(max)).toLocaleString('ru-RU')} SOLD`;
+            
+        } catch(e){}
+        }
 
         async function checkNFTs() {
             if(!nftContract) return;
@@ -795,7 +836,7 @@
 
         async function switchNetwork(id) {
             try { await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: ethers.utils.hexValue(parseInt(id)) }] }); }
-            catch(e) { alert("Switch failed"); }
+            catch(e) { openModal('error', "Switch failed"); }
         }
 
         const mintEthInput = document.getElementById('mintAmountEth');
@@ -807,39 +848,88 @@
             }
         });
 
-        function openModal(type, txt) {
-            const m = document.getElementById('txModal'); m.style.display='flex';
-            document.getElementById('modalDesc').innerText = txt;
-            document.getElementById('modalIcon').innerHTML = type==='loading' ? '<div class="spinner"></div>' : (type==='success'?'✅':'❌');
+        // 🟢 функция openModal
+        
+        function openModal(type, title, txHash = null, details = null) {
+            const m = document.getElementById('txModal'); 
+            m.style.display='flex';
+            
+            let iconHtml = '';
+            let detailsHtml = '';
+
+            switch (type) {
+                case 'loading':
+                    iconHtml = '<div class="spinner"></div>';
+                    document.getElementById('modalDesc').innerText = title;
+                    break;
+                case 'success':
+                    iconHtml = '✅';
+                    document.getElementById('modalDesc').innerText = title; 
+                    if (details) {
+                        detailsHtml += `<p style="font-size: 0.9rem; color: #ccc; margin-top: 5px;">${details}</p>`;
+                    }
+                    if (txHash && provider) {
+                        provider.getNetwork().then(net => {
+                            const explorerUrl = getExplorerUrl(net.chainId, txHash);
+                            const shortHash = txHash.substring(0, 6) + '...' + txHash.substring(txHash.length - 4);
+                            
+                            document.getElementById('modalIcon').innerHTML = iconHtml;
+                            document.getElementById('modalDesc').innerHTML = `
+                                <h3 style="margin: 0; color: var(--primary);">${title}</h3>
+                                ${detailsHtml}
+                                <div style="margin-top: 10px; font-size: 0.8rem;">
+                                    <span style="color: #888;">TX Hash: </span>
+                                    <a href="${explorerUrl}" target="_blank" style="color: var(--primary); text-decoration: none; font-weight: bold;">
+                                        ${shortHash} ↗
+                                    </a>
+                                </div>
+                            `;
+
+                        }).catch(e => {
+                            console.error("Failed to get network for explorer URL:", e);
+                            document.getElementById('modalIcon').innerHTML = iconHtml;
+                            document.getElementById('modalDesc').innerHTML = `
+                                <h3 style="margin: 0; color: var(--primary);">${title}</h3>
+                                ${detailsHtml}
+                                <div style="margin-top: 10px; font-size: 0.8rem; color: #888;">TX Hash: ${txHash}</div>
+                            `;
+                        });
+                        return; 
+                    }
+                    break;
+                case 'error':
+                    iconHtml = '❌';
+                    document.getElementById('modalDesc').innerText = `Error: ${title}`;
+                    break;
+            }
+
+            // Стандартное отображение для loading/error или если нет txHash
+            document.getElementById('modalIcon').innerHTML = iconHtml;
+            document.getElementById('modalDesc').innerHTML = `<h3 style="margin: 0; color: ${type==='success'?'var(--primary)':'var(--error)'};">${title}</h3>`;
+            if (type === 'error' && title.includes('Error:')) {
+                 document.getElementById('modalDesc').innerText = title;
+            }
         }
         function closeModal() { document.getElementById('txModal').style.display='none'; }
 
-        // Функция, которая показывает/скрывает выпадающий список
         document.getElementById('networkBtn').addEventListener('click', function() {
-          document.getElementById('networkDropdown').classList.toggle('show');
+            document.getElementById('networkDropdown').classList.toggle('show');
         });
 
-        // Закрытие списка, если кликнуть в любом другом месте страницы
         window.onclick = function(event) {
-         if (!event.target.matches('.network-select')) {
+          if (!event.target.matches('.network-select')) {
         const dropdown = document.getElementById('networkDropdown');
         if (dropdown && dropdown.classList.contains('show')) {
             dropdown.classList.remove('show');
             }
-         }
+          }
         }
 
-        // Новая функция для обработки выбора сети (она заменяет onchange из старого select)
-         function switchNetworkByValue(chainId, chainName) {
-         // 1. Обновляем текст на главной кнопке
-         document.getElementById('networkBtn').innerText = chainName;
-    
-         // 2. Вызываем вашу функцию для смены сети
-         switchNetwork(chainId); 
-    
-         // 3. Скрываем список (выполняется автоматически через window.onclick, но лучше явно)
-         document.getElementById('networkDropdown').classList.remove('show');
-         }
+          function switchNetworkByValue(chainId, chainName) {
+           document.getElementById('networkBtn').innerText = chainName;
+           switchNetwork(chainId); 
+           document.getElementById('networkDropdown').classList.remove('show');
+           }
 
     </script>
 </body>
